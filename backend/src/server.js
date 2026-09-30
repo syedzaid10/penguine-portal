@@ -185,21 +185,25 @@ import { runSeed } from './seed.js';
 // Start Server
 async function start() {
   try {
-    await connectDB();
-
-    // Check if database needs initial seeding
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      console.log('ℹ️ Database is empty. Automatically initializing Penguine archive data...');
-      await runSeed(false);
-    }
-
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`=======================================================`);
-      console.log(`🚀 Penguine Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Penguine Server running on http://0.0.0.0:${PORT}`);
       console.log(`   National Polar Data Archive & Content Studio`);
       console.log(`=======================================================`);
     });
+
+    try {
+      await connectDB();
+
+      // Check if database needs initial seeding
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        console.log('ℹ️ Database is empty. Automatically initializing Penguine archive data...');
+        await runSeed(false);
+      }
+    } catch (dbErr) {
+      console.warn('⚠️ Database connection warning (portal remains live):', dbErr.message);
+    }
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

@@ -9,7 +9,7 @@
     "seed": "npm --prefix backend run seed",
     "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
     "build": "npm --prefix frontend run build",
-    "render-build": "npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build",
+    "render-build": "cd backend && npm install && cd ../frontend && npm install && npm run build",
     "start": "node backend/src/server.js"
   },
   "keywords": [
@@ -24,7 +24,7 @@
   ],
   "author": "Penguine",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "concurrently": "^9.1.2"
   }
 }
