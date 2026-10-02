@@ -24,6 +24,8 @@ const AuditLogSchema = new mongoose.Schema(
         'CONTENT_APPROVE',
         'DELETE',
         'USER_ROLE_CHANGE',
+        'USER_ACCOUNT_APPROVED',
+        'USER_ACCOUNT_REJECTED',
         'UPLOAD',
       ],
     },

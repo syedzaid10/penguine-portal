@@ -90,16 +90,22 @@ router.patch('/:id/status', protect, requireRole('admin'), async (req, res) => {
 
     await user.save();
 
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: status === 'active' ? 'USER_ACCOUNT_APPROVED' : 'USER_ACCOUNT_REJECTED',
-      targetType: 'User',
-      targetId: user._id.toString(),
-      targetTitle: user.name,
-      comment: `Changed status from ${oldStatus} to ${status} (Role: ${user.role})`,
-    });
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: status === 'active' ? 'USER_ACCOUNT_APPROVED' : 'USER_ACCOUNT_REJECTED',
+        targetType: 'User',
+        targetId: user._id.toString(),
+        targetTitle: user.name,
+        oldStatus,
+        newStatus: status,
+        comment: `Account ${status === 'active' ? 'approved' : status} (Role: ${user.role})`,
+      });
+    } catch (auditErr) {
+      console.warn('Could not record user status audit log:', auditErr.message);
+    }
 
     res.json({
       success: true,

@@ -47,6 +47,10 @@ export default function AuditLogView() {
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'USER_ROLE_CHANGE':
         return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'USER_ACCOUNT_APPROVED':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'USER_ACCOUNT_REJECTED':
+        return 'bg-rose-50 text-rose-700 border-rose-200';
       case 'DELETE':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       default:
@@ -117,6 +121,8 @@ export default function AuditLogView() {
           <option value="CONTENT_GENERATE">CONTENT_GENERATE</option>
           <option value="UPLOAD">UPLOAD</option>
           <option value="USER_ROLE_CHANGE">USER_ROLE_CHANGE</option>
+          <option value="USER_ACCOUNT_APPROVED">USER_ACCOUNT_APPROVED</option>
+          <option value="USER_ACCOUNT_REJECTED">USER_ACCOUNT_REJECTED</option>
           <option value="DELETE">DELETE</option>
         </select>
       </div>
