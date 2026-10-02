@@ -23,6 +23,16 @@ const UserSchema = new mongoose.Schema({
     enum: ['public', 'scientist', 'editor', 'admin'],
     default: 'public',
   },
+  status: {
+    type: String,
+    enum: ['active', 'pending', 'rejected'],
+    default: 'active',
+  },
+  requestedRole: {
+    type: String,
+    enum: ['public', 'scientist', 'editor', 'admin', ''],
+    default: '',
+  },
   department: {
     type: String,
     default: 'National Centre for Polar and Ocean Research (NCPOR)',
@@ -30,6 +40,13 @@ const UserSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: '',
+  },
+  approvedAt: {
+    type: Date,
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
   },
   createdAt: {
     type: Date,

@@ -41,6 +41,22 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    if (user.status === 'pending') {
+      return res.status(403).json({
+        success: false,
+        status: 'pending',
+        message: `Your account registration as ${user.role.toUpperCase()} is currently pending verification and approval by an administrator. Please check back soon or contact NCPOR/MoES administration.`,
+      });
+    }
+
+    if (user.status === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        status: 'rejected',
+        message: 'Your institutional account registration request was not approved. Please contact NCPOR administration.',
+      });
+    }
+
     const token = generateToken(user._id);
 
     res.json({
@@ -51,6 +67,7 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        status: user.status,
         department: user.department,
         avatar: user.avatar,
       },
@@ -61,10 +78,22 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   POST /api/auth/register
-// @desc    Register a new user
+// @desc    Register a new user (public accounts active immediately; scientist/editor require admin approval)
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role = 'scientist', department } = req.body;
+    const { name, email, password, role = 'public', department } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email, and password.',
+      });
+    }
+
+    // Protect against registering as admin directly
+    const assignedRole = ['public', 'scientist', 'editor'].includes(role) ? role : 'public';
+    const isInstantActivation = assignedRole === 'public';
+    const status = isInstantActivation ? 'active' : 'pending';
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
@@ -81,22 +110,43 @@ router.post('/register', async (req, res) => {
       name,
       email: email.toLowerCase(),
       passwordHash,
-      role,
-      department: department || 'National Centre for Polar and Ocean Research (NCPOR)',
+      role: assignedRole,
+      requestedRole: assignedRole,
+      status,
+      department: department || (isInstantActivation ? 'Public Scholar / Guest' : 'National Centre for Polar and Ocean Research (NCPOR)'),
     });
 
-    const token = generateToken(user._id);
+    if (isInstantActivation) {
+      const token = generateToken(user._id);
+      return res.status(201).json({
+        success: true,
+        requiresApproval: false,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          department: user.department,
+        },
+        message: 'Account created successfully! Welcome to Penguine Polar Portal.',
+      });
+    }
 
-    res.status(201).json({
+    // Institutional roles require admin approval
+    return res.status(201).json({
       success: true,
-      token,
+      requiresApproval: true,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        status: user.status,
         department: user.department,
       },
+      message: `Registration submitted! Because you applied for the ${assignedRole.toUpperCase()} role, your institutional credentials must be reviewed and approved by an MoES/NCPOR administrator before you can sign in.`,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

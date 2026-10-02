@@ -1,16 +1,47 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Compass, Shield, Lock, Mail, ArrowRight, UserCheck, Sparkles, Check } from 'lucide-react';
+import {
+  Compass,
+  Shield,
+  Lock,
+  Mail,
+  ArrowRight,
+  UserCheck,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  UserPlus,
+  Building,
+  User,
+  FlaskConical,
+  FileEdit,
+  Globe,
+  AlertCircle,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { user, role, login, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Mode: 'login' or 'register'
+  const [activeTab, setActiveTab] = useState('login');
+
+  // Sign In State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Registration State
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regRole, setRegRole] = useState('scientist');
+  const [regDepartment, setRegDepartment] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState(null);
 
   const officialCredentials = [
     {
@@ -55,9 +86,10 @@ export default function Login() {
     setEmail(credsEmail);
     setPassword(credsPassword);
     setError('');
+    setActiveTab('login');
   };
 
-  const handleSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -84,6 +116,56 @@ export default function Login() {
       setError('Server connection failed: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setRegError('');
+    setRegSuccess(null);
+    setRegLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: regName,
+          email: regEmail,
+          password: regPassword,
+          role: regRole,
+          department: regDepartment,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (!data.requiresApproval && data.token) {
+          // Instant activation for public role
+          login(data.user, data.token);
+          setRegSuccess({
+            title: 'Welcome to Penguine!',
+            message: 'Your public researcher account has been activated immediately.',
+            requiresApproval: false,
+          });
+          setTimeout(() => navigate('/library'), 1800);
+        } else {
+          // Requires admin approval for scientist or editor
+          setRegSuccess({
+            title: 'Registration Submitted for Verification',
+            message: data.message,
+            requiresApproval: true,
+            role: regRole,
+            email: regEmail,
+          });
+        }
+      } else {
+        setRegError(data.message || 'Registration failed. Please check your details.');
+      }
+    } catch (err) {
+      setRegError('Server connection failed: ' + err.message);
+    } finally {
+      setRegLoading(false);
     }
   };
 
@@ -131,72 +213,347 @@ export default function Login() {
           </div>
         )}
 
-        {/* Real Login Form Card */}
+        {/* Main Authentication Card */}
         <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/40 shadow-2xl text-slate-900">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
-            <div>
-              <h3 className="font-heading font-bold text-lg text-slate-900">
-                Staff & Researcher Sign In
-              </h3>
-              <p className="text-xs text-slate-500 font-sans mt-0.5">
-                Sign in with verified institutional credentials
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
-              <Lock className="w-4 h-4" />
-            </div>
+          {/* Segmented Switcher: Sign In vs Create Account */}
+          <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-200 flex mb-6">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('login'); setError(''); setRegError(''); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
+                activeTab === 'login'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('register'); setError(''); setRegError(''); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
+                activeTab === 'register'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Create an Account</span>
+            </button>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-mono">
-              {error}
+          {/* TAB 1: SIGN IN FORM */}
+          {activeTab === 'login' && (
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div>
+                  <h3 className="font-heading font-bold text-base text-slate-900">
+                    Staff & Scholar Sign In
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Sign in with verified institutional credentials
+                  </p>
+                </div>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start space-x-2 leading-relaxed">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="scientist@penguine.gov.in"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full btn-glacier-primary py-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 mt-2 transition-all shadow-md"
+                >
+                  <span>{loading ? 'Authenticating...' : 'Sign In with Credentials'}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </form>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* TAB 2: CREATE AN ACCOUNT FORM */}
+          {activeTab === 'register' && (
             <div>
-              <label className="block text-xs font-mono font-bold text-slate-700 mb-1.5">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="scientist@penguine.gov.in"
-                  className="w-full bg-white border border-slate-300 focus:border-blue-600 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-sm transition-all"
-                />
-              </div>
-            </div>
+              {regSuccess ? (
+                <div className="p-6 rounded-2xl bg-blue-50/80 border border-blue-200 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mx-auto shadow-xs">
+                    {regSuccess.requiresApproval ? (
+                      <Clock className="w-6 h-6 text-amber-600" />
+                    ) : (
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-heading font-extrabold text-base text-slate-900">
+                      {regSuccess.title}
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed mt-1.5 max-w-md mx-auto">
+                      {regSuccess.message}
+                    </p>
+                  </div>
 
-            <div>
-              <label className="block text-xs font-mono font-bold text-slate-700 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-white border border-slate-300 focus:border-blue-600 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-sm transition-all"
-                />
-              </div>
-            </div>
+                  {regSuccess.requiresApproval && (
+                    <div className="p-3 bg-white rounded-xl border border-blue-200/80 text-[11px] text-slate-600 space-y-1 text-left">
+                      <div className="font-bold text-slate-800">Application Reference:</div>
+                      <div>Requested Role: <span className="font-bold uppercase text-blue-700">{regSuccess.role}</span></div>
+                      <div>Registered Email: <span className="font-semibold text-slate-800">{regSuccess.email}</span></div>
+                      <div className="text-amber-700 font-semibold pt-1">
+                        Status: Pending Administrator Verification
+                      </div>
+                    </div>
+                  )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-glacier-primary py-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 mt-2 transition-all shadow-md"
-            >
-              <span>{loading ? 'Authenticating...' : 'Sign In with Credentials'}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </form>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegSuccess(null);
+                        setActiveTab('login');
+                      }}
+                      className="btn-glacier-primary px-5 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5"
+                    >
+                      <span>Return to Sign In</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="pb-3 border-b border-slate-100 mb-4">
+                    <h3 className="font-heading font-bold text-base text-slate-900">
+                      National Polar Science Portal Registration
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Choose your role to request access to the research repository
+                    </p>
+                  </div>
+
+                  {regError && (
+                    <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start space-x-2 leading-relaxed">
+                      <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                      <span>{regError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                    {/* Role Selection Option Cards */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">
+                        Select Requested Role
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        {/* 1. Public Visitor */}
+                        <div
+                          onClick={() => setRegRole('public')}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                            regRole === 'public'
+                              ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500/30'
+                              : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <Globe className="w-4 h-4 text-blue-600" />
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Instant
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs text-slate-900">Public Scholar</div>
+                          <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                            Immediate exploration access
+                          </div>
+                        </div>
+
+                        {/* 2. Research Scientist */}
+                        <div
+                          onClick={() => setRegRole('scientist')}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                            regRole === 'scientist'
+                              ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500/30'
+                              : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <FlaskConical className="w-4 h-4 text-blue-600" />
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                              Admin Verify
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs text-slate-900">Scientist</div>
+                          <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                            Upload papers & telemetry
+                          </div>
+                        </div>
+
+                        {/* 3. Science Editor */}
+                        <div
+                          onClick={() => setRegRole('editor')}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                            regRole === 'editor'
+                              ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500/30'
+                              : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <FileEdit className="w-4 h-4 text-purple-600" />
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                              Admin Verify
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs text-slate-900">Science Editor</div>
+                          <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                            Review queue & Content Studio
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Full Name & Title
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                        <input
+                          type="text"
+                          required
+                          value={regName}
+                          onChange={(e) => setRegName(e.target.value)}
+                          placeholder="e.g. Dr. Vikram Joshi"
+                          className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                        <input
+                          type="email"
+                          required
+                          value={regEmail}
+                          onChange={(e) => setRegEmail(e.target.value)}
+                          placeholder="e.g. vikram.joshi@ncpor.res.in"
+                          className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Create Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                        <input
+                          type="password"
+                          required
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="At least 6 characters"
+                          className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Department / Institution */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Department / Research Affiliation
+                      </label>
+                      <div className="relative">
+                        <Building className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                        <input
+                          type="text"
+                          value={regDepartment}
+                          onChange={(e) => setRegDepartment(e.target.value)}
+                          placeholder="e.g. NCPOR Ocean Sciences / Goa University"
+                          className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none shadow-xs transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Verification Notice Banner */}
+                    {regRole !== 'public' ? (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-start space-x-2">
+                        <Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Verification Policy:</strong> Because you are registering for an official institutional role (<strong>{regRole.toUpperCase()}</strong>), your account will enter the Administrator Approval Queue and will be verified before you can access upload and editing capabilities.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 flex items-start space-x-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Instant Access:</strong> Public researcher accounts activate immediately upon form submission with full access to datasets and library items.
+                        </span>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={regLoading}
+                      className="w-full btn-glacier-primary py-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 mt-2 transition-all shadow-md"
+                    >
+                      <span>
+                        {regLoading
+                          ? 'Registering Account...'
+                          : regRole === 'public'
+                          ? 'Create Account & Sign In'
+                          : 'Submit for Administrator Approval'}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Official Credentials Reference Card */}
